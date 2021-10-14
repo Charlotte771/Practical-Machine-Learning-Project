@@ -1,0 +1,74 @@
+---
+title: "Practical Macheine Learning Project"
+author: "me"
+date: "14/10/2021"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+**Overview**
+*When loading the data it was evident that there was a large amount of data that would not be useful for the analysis. Therefore, I started by removing the values of NA, values close to 0 and the columns which were not going to contribute. Then I separated the training data into train_1 and train_2 so I could create a model with train_1 and test the accuracy with train_2. To determine the most accurate predictive model I tested the accuracy of RF, GBM, and LDA and will use the most accurate for the testing data.*
+
+```{r data}
+testing <- read.csv("~/Desktop/pml-testing.csv")
+training <- read.csv("~/Desktop/pml-training.csv")
+training <- training[ , colSums(is.na(training))==0]
+training <- training[,-c(1:7)]
+testing <- testing[ , colSums(is.na(testing))==0]
+
+```
+
+
+
+```{r split data into train and test sets}
+library(caret)
+set.seed(1234)
+inTrain <- createDataPartition(y=training$classe, p=0.7, list = FALSE)
+train_1 <- training[inTrain, ]
+train_2 <- training[-inTrain, ]
+train_1 <- train_1[,-(nearZeroVar(train_1))]
+train_2 <- train_2[,-(nearZeroVar(train_2))]
+dim(train_1)
+dim(train_2)
+```
+
+```{r random forest}
+library(AppliedPredictiveModeling)
+library(gbm)
+library(lda)
+library(randomForest)
+set.seed(1234)
+control <- trainControl(method="cv", number=3, verboseIter=FALSE)
+rf_model <- train(classe ~ ., data=train_1, method="rf", trControl=control)
+rf_model$finalModel
+```
+
+```{r random forest predict}
+rf_pred <- predict(rf_model, newdata=train_2)
+rf_mat <- confusionMatrix(rf_pred, factor(train_2$classe))$overall['Accuracy']
+rf_mat
+```
+*The accuracy for the random forest model is 0.9934 with an out-of-sample error of 0.0066*
+
+
+```{r gbm}
+gbm_model <- train(classe ~ ., data=train_1, method="gbm", trControl=control)
+gbm_model$finalModel
+gbm_pred <- predict(gbm_model, newdata=train_2)
+gbm_mat <- confusionMatrix(gbm_pred, factor(train_2$classe))$overall['Accuracy']
+gbm_mat
+```
+*The accuracy for the gbm model is 0.9670 with an out-of-sample error of 0.0330.*
+
+```{r lda}
+lda_model <- train(classe ~ ., data=train_1, method="lda", trControl=control)
+lda_model$finalModel
+lda_pred <- predict(lda_model, newdata=train_2)
+lda_mat <- confusionMatrix(lda_pred, factor(train_2$classe))$overall['Accuracy']
+lda_mat
+```
+*The accuracy for the lda model is 0.6960 with an out-of-sample error of 0.3040.*
+
+**Of the three different prediction models: RF, GBM, and LDA the most accurate prediction model is Random Forest with an accuracy of 0.993373. This is the model which will be used for the Course Project Prediction Quiz.**
+
